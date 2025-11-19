@@ -30,10 +30,11 @@ export function CardTextResponse({ text, className }: CardTextResponseProps) {
             <button
                 onClick={handleCopy}
                 className={cn(
-                    "relative w-full max-w-xl mx-auto mt-6",
+                    "relative w-full max-w-xl mx-auto mt-6 mb-4",
                     "rounded-lg border-2 border-text-primary",
                     "bg-bg-container",
                     "p-6",
+                    "flex-1 min-h-0 overflow-y-auto",
                     "animate-fadeIn",
                     "hover:bg-bg-base transition-colors duration-200",
                     "cursor-pointer text-left",
@@ -49,7 +50,7 @@ export function CardTextResponse({ text, className }: CardTextResponseProps) {
                         </p>
                     </div>
                     {copied && (
-                        <Check className="w-5 h-5 text-accent-brown flex-shrink-0" />
+                        <Check className="w-5 h-5 text-accent-brown flex-shrink-0 sticky top-0" />
                     )}
                 </div>
             </button>

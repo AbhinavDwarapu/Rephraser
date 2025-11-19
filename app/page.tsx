@@ -112,12 +112,12 @@ export default function Home() {
 
       <main className="relative flex min-h-screen w-full max-w-4xl flex-col items-center justify-center py-12 px-4">
         {/* Main container with brutalist border */}
-        <div className="relative w-full h-[85vh] border-4 border-black/70 rounded-3xl bg-[#FAF7F5] p-8 mr-2 md:mr-0 md:p-12 shadow-[8px_8px_0px_0px_rgba(45,45,45,1)]">
-          <div className="flex flex-col items-center justify-center w-full">
-            <h1 className="text-4xl md:text-5xl font-bold text-text-primary mb-8 text-center uppercase tracking-tight">
+        <div className="relative w-full h-[85vh] border-4 border-black/70 rounded-3xl bg-[#FAF7F5] p-8 mr-2 md:mr-0 md:p-12 shadow-[8px_8px_0px_0px_rgba(45,45,45,1)] flex flex-col">
+          <div className="flex flex-col items-center w-full flex-1 min-h-0">
+            <h1 className="text-4xl md:text-5xl font-bold text-text-primary mb-8 text-center uppercase tracking-tight flex-shrink-0">
               AI Text Rephraser & Synonym Finder
             </h1>
-            <div className="w-full">
+            <div className="w-full flex-shrink-0">
               <AIInputWithSuggestions
                 actions={CUSTOM_ACTIONS}
                 defaultSelected="Fluent"
