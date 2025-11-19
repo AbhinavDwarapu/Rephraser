@@ -1,65 +1,175 @@
-import Image from "next/image";
+'use client';
+
+import { AIInputWithSuggestions } from "@/components/ui/ai-input-with-suggestions";
+import { Sparkles, Briefcase, MessageCircle, Star, BookText } from "lucide-react";
+import { CardTextResponse } from "@/components/ui/card-text-response";
+import { SynonymCards } from "@/components/ui/synonym-cards";
+import { parseStreamingResponse, parseSynonyms, cleanQuotationMarks } from "@/lib/utils";
+import { useState } from "react";
 
 export default function Home() {
+  const [responseText, setResponseText] = useState<string>("");
+  const [synonyms, setSynonyms] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const handleSubmit = async (text: string, action?: string) => {
+    if (!action) {
+      console.log('No action selected');
+      return;
+    }
+
+    // Clear previous responses and set loading state
+    setResponseText("");
+    setSynonyms([]);
+    setIsLoading(true);
+
+    // Check if action is explicitly "synonym" or if input is a single word
+    const wordCount = text.trim().split(/\s+/).length;
+    const isSingleWord = wordCount === 1;
+    const isSynonymAction = action.toLowerCase() === 'synonym';
+    const useSynonymEndpoint = isSynonymAction || isSingleWord;
+
+    try {
+      const endpoint = useSynonymEndpoint ? '/api/synonym' : '/api/rephrase';
+      const bodyKey = useSynonymEndpoint ? 'word' : 'sentence';
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          [bodyKey]: text,
+          ...(useSynonymEndpoint ? {} : { sentiment: action.toLowerCase() }),
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('API request failed:', response.statusText);
+        setIsLoading(false);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        console.error('No reader available');
+        setIsLoading(false);
+        return;
+      }
+
+      let fullResponse = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        fullResponse += chunk;
+        console.log('Chunk received:', chunk);
+      }
+
+      console.log('Full response:', fullResponse);
+
+      const extractedText = parseStreamingResponse(fullResponse);
+      console.log('Extracted text:', extractedText);
+
+      if (useSynonymEndpoint) {
+        const synonymList = parseSynonyms(extractedText);
+        console.log('Parsed synonyms:', synonymList);
+        console.log('Synonym count:', synonymList.length);
+        setSynonyms(synonymList);
+      } else {
+        const cleanedText = cleanQuotationMarks(extractedText);
+        setResponseText(cleanedText || fullResponse);
+      }
+    } catch (error) {
+      console.error('Error calling API:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+    <div className="flex min-h-screen items-center justify-center font-sans bg-bg-base">
+      {/* Grid background pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(232,221,211)_1px,transparent_1px),linear-gradient(to_bottom,rgb(232,221,211)_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+
+      <main className="relative flex min-h-screen w-full max-w-4xl flex-col items-center justify-center py-12 px-4">
+        {/* Main container with brutalist border */}
+        <div className="relative w-full h-[85vh] border-4 border-black/70 rounded-3xl bg-[#FAF7F5] p-8 md:p-12 shadow-[8px_8px_0px_0px_rgba(45,45,45,1)]">
+          <div className="flex flex-col items-center justify-center w-full">
+            <h1 className="text-4xl md:text-5xl font-bold text-text-primary mb-8 text-center uppercase tracking-tight">
+              AI Text Rephraser & Synonym Finder
+            </h1>
+            <div className="w-full">
+              <AIInputWithSuggestions
+                actions={CUSTOM_ACTIONS}
+                defaultSelected="Fluent"
+                placeholder="Enter text to rephrase, find synonyms for a word, or use the STAR method..."
+                onSubmit={handleSubmit}
+                disabled={isLoading}
+              />
+            </div>
+
+            {synonyms.length > 0 && (
+              <SynonymCards synonyms={synonyms} />
+            )}
+
+            {responseText && (
+              <CardTextResponse text={responseText} />
+            )}
+          </div>
         </div>
       </main>
     </div>
   );
 }
+
+const CUSTOM_ACTIONS = [
+  {
+    text: "Fluent",
+    icon: Sparkles,
+    colors: {
+      icon: "text-blue-600",
+      border: "border-blue-500",
+      bg: "bg-blue-100",
+    },
+  },
+  {
+    text: "Professional",
+    icon: Briefcase,
+    colors: {
+      icon: "text-green-600",
+      border: "border-green-400",
+      bg: "bg-green-100",
+    },
+  },
+  {
+    text: "Casual",
+    icon: MessageCircle,
+    colors: {
+      icon: "text-purple-600",
+      border: "border-purple-500",
+      bg: "bg-purple-200",
+    },
+  },
+  {
+    text: "STAR Method",
+    icon: Star,
+    colors: {
+      icon: "text-amber-600",
+      border: "border-amber-500",
+      bg: "bg-amber-100",
+    },
+  },
+  {
+    text: "Synonym",
+    icon: BookText,
+    colors: {
+      icon: "text-rose-600",
+      border: "border-rose-400",
+      bg: "bg-rose-100",
+    },
+  },
+];
