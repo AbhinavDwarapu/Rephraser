@@ -45,7 +45,22 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        console.error('API request failed:', response.statusText);
+        const errorText = await response.text().catch(() => '');
+        let errorMessage = 'API request failed';
+
+        if (response.status === 403) {
+          errorMessage = 'Request blocked by security check. Please refresh and try again.';
+        } else if (errorText) {
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.error || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+        }
+
+        console.error('API request failed:', errorMessage, response.status);
+        alert(errorMessage); // Show error to user
         setIsLoading(false);
         return;
       }

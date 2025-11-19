@@ -1,13 +1,6 @@
 import { streamText, gateway } from 'ai';
-import { checkBotId } from 'botid/server';
 
 export async function POST(req: Request) {
-    // Bot detection
-    const botDetection = await checkBotId();
-    if (botDetection.isBot && !botDetection.isVerifiedBot) {
-        return new Response('Bot detected', { status: 403 });
-    }
-
     const { sentence, sentiment }: { sentence: string; sentiment: string } = await req.json();
 
     let userPrompt = '';
