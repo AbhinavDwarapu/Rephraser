@@ -2,11 +2,12 @@
 
 AI-powered tool to rephrase text in different tones (fluent, professional, casual, STAR method) and find synonyms for words or phrases.
 
+Try it [here](rephrase-me.com)!
+
 ## Tech Stack
 
 - **Next.js 16** - React framework
 - **Vercel AI SDK** - AI streaming & gateway
-- **Botid** - Bot detection & protection
 - **Mistral AI** - Language model (ministral-3b)
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
@@ -59,4 +60,4 @@ Environment variables required:
 
 ## Note
 
-This project was built as a learning exercise exploring the new **Gemini 3.0 model** and **Antigravity** (Google's AI-powered code editor) to better understand the AI-assisted development workflow.
+This project was built as a learning exercise exploring the new [Gemini 3.0 model](https://blog.google/products/gemini/gemini-3/) and [Antigravity](https://antigravity.google/) (Google's AI-powered code editor) to better understand the AI-assisted development workflow.
