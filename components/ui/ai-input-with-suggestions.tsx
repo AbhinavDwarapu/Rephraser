@@ -6,6 +6,7 @@ import {
     CheckCheck,
     ArrowDownWideNarrow,
     CornerRightDown,
+    CornerDownLeft,
 } from "lucide-react";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -160,6 +161,28 @@ export function AIInputWithSuggestions({
                                     </button>
                                 </div>
                             )}
+
+                            {/* Submit button at bottom right */}
+                            <div className="absolute right-3 bottom-3 z-10">
+                                <button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={disabled || !inputValue.trim()}
+                                    className={cn(
+                                        "w-8 h-8 rounded-md",
+                                        "border-2 border-text-primary",
+                                        "bg-peach",
+                                        "flex items-center justify-center",
+                                        "transition-all duration-200",
+                                        "hover:bg-peach/50 hover:text-bg-base",
+                                        disabled || !inputValue.trim()
+                                            ? "opacity-30 cursor-not-allowed"
+                                            : "opacity-100 hover:scale-105"
+                                    )}
+                                >
+                                    <CornerDownLeft className="w-4 h-4 text-text-primary" />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
