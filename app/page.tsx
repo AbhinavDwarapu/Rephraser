@@ -4,17 +4,17 @@ import { AIInputWithSuggestions } from "@/components/ui/ai-input-with-suggestion
 import { Sparkles, Briefcase, MessageCircle, Star, BookText } from "lucide-react";
 import { CardTextResponse } from "@/components/ui/card-text-response";
 import { SynonymCards } from "@/components/ui/synonym-cards";
-import { parseStreamingResponse, parseSynonyms, cleanQuotationMarks } from "@/lib/utils";
+import { Toast, useToast } from "@/components/ui/toast";
 import { useState } from "react";
 
 export default function Home() {
   const [responseText, setResponseText] = useState<string>("");
   const [synonyms, setSynonyms] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { show, message, showToast } = useToast();
 
   const handleSubmit = async (text: string, action?: string) => {
     if (!action) {
-      console.log('No action selected');
       return;
     }
 
@@ -50,6 +50,14 @@ export default function Home() {
 
         if (response.status === 403) {
           errorMessage = 'Request blocked by security check. Please refresh and try again.';
+        } else if (response.status === 400) {
+          // Validation error from server
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.error || 'Invalid input';
+          } catch {
+            errorMessage = 'Invalid input';
+          }
         } else if (errorText) {
           try {
             const errorJson = JSON.parse(errorText);
@@ -60,44 +68,48 @@ export default function Home() {
         }
 
         console.error('API request failed:', errorMessage, response.status);
-        alert(errorMessage); // Show error to user
+        showToast(errorMessage); // Show error in toast
         setIsLoading(false);
         return;
       }
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+      const data = await response.json();
 
-      if (!reader) {
-        console.error('No reader available');
-        setIsLoading(false);
-        return;
+      try {
+        if (useSynonymEndpoint) {
+          if (data.synonyms && Array.isArray(data.synonyms)) {
+            setSynonyms(data.synonyms);
+          }
+        } else {
+          if (action.toLowerCase() === 'star method') {
+            // Helper to find key case-insensitively
+            const getValue = (obj: any, key: string) => {
+              const foundKey = Object.keys(obj).find(k => k.toLowerCase() === key.toLowerCase());
+              return foundKey ? obj[foundKey] : undefined;
+            };
+
+            const situation = getValue(data, 'situation');
+            const task = getValue(data, 'task');
+            const starAction = getValue(data, 'action');
+            const result = getValue(data, 'result');
+
+            const formattedStar = `Situation: ${situation || '...'}
+
+Task: ${task || '...'}
+
+Action: ${starAction || '...'}
+
+Result: ${result || '...'}`;
+            setResponseText(formattedStar);
+          } else {
+            setResponseText(data.rephrased || JSON.stringify(data));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to handle response:', e);
+        setResponseText('Error processing response');
       }
 
-      let fullResponse = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        fullResponse += chunk;
-        console.log('Chunk received:', chunk);
-      }
-
-      console.log('Full response:', fullResponse);
-
-      const extractedText = parseStreamingResponse(fullResponse);
-      console.log('Extracted text:', extractedText);
-
-      if (useSynonymEndpoint) {
-        const synonymList = parseSynonyms(extractedText);
-        console.log('Parsed synonyms:', synonymList);
-        console.log('Synonym count:', synonymList.length);
-        setSynonyms(synonymList);
-      } else {
-        const cleanedText = cleanQuotationMarks(extractedText);
-        setResponseText(cleanedText || fullResponse);
-      }
     } catch (error) {
       console.error('Error calling API:', error);
     } finally {
@@ -135,6 +147,9 @@ export default function Home() {
               <CardTextResponse text={responseText} />
             )}
           </div>
+
+          {/* Toast notification */}
+          <Toast show={show} message={message} />
         </div>
       </main>
     </div>

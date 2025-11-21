@@ -1,87 +1,55 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import validator from 'validator';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 /**
- * Parse streaming response in text-delta format
- * @param fullResponse - The complete streaming response
- * @returns Extracted text from all text-delta events
+ * Validates input to prevent prompt injection and malicious content
  */
-export function parseStreamingResponse(fullResponse: string): string {
-  const lines = fullResponse.split('\n').filter(line => line.trim());
-  let extractedText = '';
+export function validateInput(input: string): { valid: boolean; error?: string } {
+  // Check for empty or whitespace-only input
+  if (!input || validator.isEmpty(input.trim())) {
+    return { valid: false, error: 'Input cannot be empty' };
+  }
 
-  for (const line of lines) {
-    try {
-      // Remove 'data: ' prefix if present
-      const jsonStr = line.startsWith('data: ') ? line.substring(6) : line;
+  // Check length
+  if (input.length > 1000) {
+    return { valid: false, error: 'Input too long (max 1000 characters)' };
+  }
 
-      // Skip [DONE] marker
-      if (jsonStr === '[DONE]') continue;
+  // Check for excessive special characters that might indicate injection attempts
+  const specialCharCount = (input.match(/[<>{}[\]\\|]/g) || []).length;
+  if (specialCharCount > 5) {
+    return { valid: false, error: 'Input contains too many special characters' };
+  }
 
-      // Try to parse as JSON first (for text-delta format)
-      const data = JSON.parse(jsonStr);
-      if (data.type === 'text-delta' && data.delta) {
-        extractedText += data.delta;
-      } else if (data.text) {
-        // Handle other JSON formats with text field
-        extractedText += data.text;
-      }
-    } catch (e) {
-      // If it's not JSON, treat as plain text
-      const plainText = line.startsWith('data: ') ? line.substring(6) : line;
-      if (plainText && plainText !== '[DONE]') {
-        extractedText += plainText;
-      }
+  // Check for common prompt injection patterns
+  const injectionPatterns = [
+    /ignore\s+(all\s+)?(previous|prior|above)\s+instructions?/gi,
+    /disregard\s+(all\s+)?(previous|prior|above)\s+instructions?/gi,
+    /forget\s+(all\s+)?(previous|prior|above)\s+instructions?/gi,
+    /new\s+instructions?:/gi,
+    /system\s*:\s*/gi,
+    /assistant\s*:\s*/gi,
+    /\[INST\]/gi,
+    /\[\/INST\]/gi,
+    /<\|im_start\|>/gi,
+    /<\|im_end\|>/gi,
+  ];
+
+  for (const pattern of injectionPatterns) {
+    if (pattern.test(input)) {
+      return { valid: false, error: 'Input contains potentially malicious content' };
     }
   }
 
-  return extractedText.trim();
-}
-
-/**
- * Parse and clean synonym list from AI response
- * @param text - Raw text containing synonyms
- * @param maxCount - Maximum number of synonyms to return (default: 6)
- * @returns Array of cleaned synonym strings
- */
-export function parseSynonyms(text: string, maxCount: number = 6): string[] {
-  // Clean up the response first - remove common intro phrases
-  let cleanedResponse = text
-    .replace(/here are \d+ (alternatives|synonyms):?/gi, '')
-    .replace(/^["']|["']$/g, '')
-    .trim();
-
-  // Try to parse as comma-separated first
-  let synonymList = cleanedResponse
-    .split(',')
-    .map(s => s.trim().replace(/^[\d\.]+\s*/, '').replace(/['\"]/g, '').trim())
-    .filter(s => s.length > 0 && !s.toLowerCase().includes('alternative'));
-
-  // If we got very few items, try parsing as numbered list
-  if (synonymList.length < 5) {
-    const numberedMatches = cleanedResponse.match(/\d+\.\s*([^\n]+)/g);
-    if (numberedMatches && numberedMatches.length > 0) {
-      synonymList = numberedMatches
-        .map(line => line.replace(/^\d+\.\s*/, '').trim())
-        .filter(s => s.length > 0);
-    }
+  // Check for script tags or HTML injection attempts
+  if (/<script|javascript:|onerror=|onload=/gi.test(input)) {
+    return { valid: false, error: 'Input contains potentially malicious content' };
   }
 
-  // Take only first maxCount and filter out any remaining junk
-  return synonymList
-    .slice(0, maxCount)
-    .filter(s => !s.toLowerCase().match(/^(here|format|do not|give me|provide)/));
-}
-
-/**
- * Remove leading and trailing quotation marks from text
- * @param text - Text to clean
- * @returns Cleaned text without surrounding quotes
- */
-export function cleanQuotationMarks(text: string): string {
-  return text.replace(/^["']|["']$/g, '').trim();
+  return { valid: true };
 }
